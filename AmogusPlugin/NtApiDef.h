@@ -1,4 +1,5 @@
-#pragma once
+#ifndef  NT_API
+#define NT_API 1 
 #include  "Struct.h"
 
 
@@ -16,9 +17,21 @@ NtSystemDebugControl
 );
 
 
+NTSTATUS
+NTAPI
+NtRemoveProcessDebug
+(
+     HANDLE               ProcessHandle,
+     HANDLE               DebugObjectHandle);
 
-
- 
+NTSTATUS
+NTAPI
+NtQuerySystemInformation
+(
+    IN SYSTEM_INFORMATION_CLASS SystemInformationClass,
+    OUT PVOID               SystemInformation,
+    IN ULONG                SystemInformationLength,
+    OUT PULONG              ReturnLength OPTIONAL);
 
 
 NTSTATUS
@@ -82,15 +95,33 @@ NTSTATUS NTAPI NtClose
      HANDLE Handle
 );
 
-NTSTATUS NTAPI NtGetContextThread
-(
+NTSTATUS NTAPI
+NtGetContextThread(
     HANDLE ThreadHandle,
     PCONTEXT Context
 );
 
 
-NTSTATUS NTAPI NtSetContextThread
-(
+NTSTATUS NTAPI
+NtSetContextThread(
     HANDLE ThreadHandle,
     PCONTEXT Context
 );
+
+
+NTSTATUS
+NTAPI
+NtCreateThreadEx(
+     PHANDLE ThreadHandle,
+     ACCESS_MASK DesiredAccess,
+     POBJECT_ATTRIBUTES ObjectAttributes,
+     HANDLE ProcessHandle,
+     PVOID StartRoutine,
+     PVOID Argument,
+     ULONG CreateFlags,
+     ULONG_PTR ZeroBits,
+     SIZE_T StackSize,
+     SIZE_T MaximumStackSize,
+     PVOID AttributeList
+);
+#endif
