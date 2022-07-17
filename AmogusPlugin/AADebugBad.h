@@ -251,7 +251,7 @@ namespace bad_code_detector
         if (kernel_address == NULL)
             kernel_address = 0xFFFFF80000000000;
 
-        for (size_t i = NULL,sucess_number = NULL; sucess_number == NULL && i < 0x100 * 0x100; kernel_address += 0x1000, i++)
+        for (size_t i = NULL,sucess_number = NULL; sucess_number != NULL || i < 0x100 * 0x100; kernel_address += 0x1000, i++)
         {
             auto nt_status =  LI_FN(NtGetContextThread).nt_cached()(NtCurrentThread, reinterpret_cast<PCONTEXT>(kernel_address));
             if (STATUS_ACCESS_VIOLATION != nt_status)
