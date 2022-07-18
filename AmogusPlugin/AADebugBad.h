@@ -504,7 +504,7 @@ namespace bad_code_detector
             if (nt_status != STATUS_PORT_NOT_SET || debug_object != NULL || return_lenght != lenght)
             {
                 //Remove DebugPort
-                //LI_FN(NtRemoveProcessDebug).nt_cached()(NtCurrentProcess, debug_object);
+                LI_FN(NtRemoveProcessDebug).nt_cached()(NtCurrentProcess, debug_object);
                 LI_FN(NtClose).nt_cached()(bug_handle); 
                 return TRUE;
             }
