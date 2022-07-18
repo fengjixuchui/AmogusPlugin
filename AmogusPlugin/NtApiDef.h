@@ -46,7 +46,9 @@ NtQueryInformationProcess
 );
 
 
-NTSTATUS NTAPI NtSetInformationProcess
+NTSTATUS 
+NTAPI 
+NtSetInformationProcess
 (
     IN HANDLE               ProcessHandle,
     IN PROCESSINFOCLASS ProcessInformationClass,
@@ -55,7 +57,9 @@ NTSTATUS NTAPI NtSetInformationProcess
 );
 
 
-NTSTATUS NTAPI NtSetInformationThread
+NTSTATUS 
+NTAPI 
+NtSetInformationThread
 (
     HANDLE          ThreadHandle,
     THREADINFOCLASS ThreadInformationClass,
@@ -63,7 +67,9 @@ NTSTATUS NTAPI NtSetInformationThread
     ULONG           ThreadInformationLength
 );
 
-NTSTATUS NTAPI NtQueryInformationThread
+NTSTATUS 
+NTAPI 
+NtQueryInformationThread
 (
     HANDLE          ThreadHandle,
     THREADINFOCLASS ThreadInformationClass,
@@ -73,7 +79,9 @@ NTSTATUS NTAPI NtQueryInformationThread
 );
 
 
-NTSTATUS NTAPI NtCreateDebugObject
+NTSTATUS 
+NTAPI 
+NtCreateDebugObject
 (
       PHANDLE DebugObjectHandle,
       ACCESS_MASK DesiredAccess,
@@ -81,7 +89,9 @@ NTSTATUS NTAPI NtCreateDebugObject
       ULONG Flags
 );
 
-NTSTATUS NTAPI NtQueryObject
+NTSTATUS 
+NTAPI 
+NtQueryObject
 (
     HANDLE Handle,
     OBJECT_INFORMATION_CLASS ObjectInformationClass,
@@ -90,20 +100,26 @@ NTSTATUS NTAPI NtQueryObject
     PULONG ReturnLength
 );
 
-NTSTATUS NTAPI NtClose
+NTSTATUS 
+NTAPI 
+NtClose
 (
      HANDLE Handle
 );
 
-NTSTATUS NTAPI
-NtGetContextThread(
+NTSTATUS 
+NTAPI
+NtGetContextThread
+(
     HANDLE ThreadHandle,
     PCONTEXT Context
 );
 
 
-NTSTATUS NTAPI
-NtSetContextThread(
+NTSTATUS 
+NTAPI
+NtSetContextThread
+(
     HANDLE ThreadHandle,
     PCONTEXT Context
 );
@@ -111,7 +127,8 @@ NtSetContextThread(
 
 NTSTATUS
 NTAPI
-NtCreateThreadEx(
+NtCreateThreadEx
+(
      PHANDLE ThreadHandle,
      ACCESS_MASK DesiredAccess,
      POBJECT_ATTRIBUTES ObjectAttributes,

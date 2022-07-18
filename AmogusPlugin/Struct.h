@@ -605,7 +605,6 @@ typedef struct _OBJECT_TYPE_INFORMATION {
     ULONG                   DefaultNonPagedPoolCharge;
 
 
-
 } OBJECT_TYPE_INFORMATION, * POBJECT_TYPE_INFORMATION;
 
 typedef struct _OBJECT_ALL_INFORMATION

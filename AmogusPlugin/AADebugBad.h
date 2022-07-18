@@ -168,7 +168,7 @@ namespace bad_code_detector
             while (nt_status == STATUS_INFO_LENGTH_MISMATCH)
             {
                 if (buffer != NULL)
-                    VirtualFree(buffer, 0, MEM_RELEASE);
+                    VirtualFree(buffer, NULL, MEM_RELEASE);
 
                 buffer = VirtualAlloc(nullptr, ret_lenght, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
                 nt_status = LI_FN(NtQuerySystemInformation).nt_cached()(SystemModuleInformation, buffer, ret_lenght, &ret_lenght);
@@ -177,7 +177,7 @@ namespace bad_code_detector
             if (!NT_SUCCESS(nt_status))
             {
                 if (buffer != NULL)
-                    VirtualFree(buffer, 0, MEM_RELEASE);
+                    VirtualFree(buffer, NULL, MEM_RELEASE);
                 return NULL;
             }
 
@@ -185,18 +185,16 @@ namespace bad_code_detector
             if (!module_info)
                 return NULL;
 
-            for (auto i = 0u; i < module_info->NumberOfModules; ++i)
+            for (ULONG i = NULL; i < module_info->NumberOfModules; ++i)
             {
-
                 if (stricmp(reinterpret_cast<char*>(module_info->Modules[i].FullPathName) + module_info->Modules[i].OffsetToFileName, module_name) == NULL)
                 {
                     base_address = reinterpret_cast<uint64_t>(module_info->Modules[i].ImageBase);
-                    VirtualFree(buffer, 0, MEM_RELEASE);
+                    VirtualFree(buffer, NULL, MEM_RELEASE);
                     return base_address;
                 }
             }
-
-            VirtualFree(buffer, 0, MEM_RELEASE);
+            VirtualFree(buffer, NULL, MEM_RELEASE);
             return NULL;
         }
 
@@ -251,7 +249,7 @@ namespace bad_code_detector
         if (kernel_address == NULL)
             kernel_address = 0xFFFFF80000000000;
 
-        for (size_t i = NULL,sucess_number = NULL; sucess_number != NULL || i < 0x100 * 0x100; kernel_address += 0x1000, i++)
+        for (size_t i = NULL,sucess_number = NULL; sucess_number == NULL && i < 0x100 * 0x100; kernel_address += 0x1000, i++)
         {
             auto nt_status =  LI_FN(NtGetContextThread).nt_cached()(NtCurrentThread, reinterpret_cast<PCONTEXT>(kernel_address));
             if (STATUS_ACCESS_VIOLATION != nt_status)
@@ -260,8 +258,8 @@ namespace bad_code_detector
 #endif // BSOD_HYPER_HIDE
              
 
-        ctx2.Dr0 = 0;
-        ctx2.Dr7 = 0;
+        ctx2.Dr0 = NULL;
+        ctx2.Dr7 = NULL;
         ctx2.ContextFlags = CONTEXT_DEBUG_REGISTERS;
         LI_FN(NtSetContextThread).nt_cached()(NtCurrentThread, &ctx2);
 
@@ -337,9 +335,9 @@ namespace bad_code_detector
     {
         bool is_thread_hide = NULL;
         INT mem_lenght_check = 0x101;
+        ULONG return_lenght = NULL;
         HANDLE hide_thread = NULL;
         HANDLE bug_handle = NULL; 
-        ULONG return_lenght = NULL;
         NTSTATUS nt_status = STATUS_UNSUCCESSFUL;
 
         //Hide thread by bug (only SharpOD/ScyllaHide  via UM)
@@ -422,7 +420,7 @@ namespace bad_code_detector
 
             // try check on write BOOL(not BYTE by system) value and under HyperrHide some-time mem_lenght_check == 0x100 (return FALSE via thread don't hide) 🚬 
             nt_status = LI_FN(NtQueryInformationThread).nt_cached()(NtCurrentThread, ThreadHideFromDebugger, &mem_lenght_check, sizeof(is_thread_hide), &return_lenght);
-            if ((NT_SUCCESS(nt_status) && (return_lenght != 1 || reinterpret_cast<INT>(mem_lenght_check) != reinterpret_cast<INT>(0x101))) || nt_status == STATUS_INFO_LENGTH_MISMATCH)
+            if ((NT_SUCCESS(nt_status) && (return_lenght != 1 || mem_lenght_check != 0x101)) || nt_status == STATUS_INFO_LENGTH_MISMATCH)
                 return TRUE;
         }
         return FALSE;
@@ -435,8 +433,8 @@ namespace bad_code_detector
     __declspec(noinline) auto is_debug_object_hooked() -> bool
     {
 
-        uint64_t number_handle = NULL;
         ULONG return_lenght = NULL;
+        uint64_t number_handle = NULL;
         HANDLE debug_object = NULL;
         HANDLE bug_handle = NULL;
         NTSTATUS nt_status = STATUS_UNSUCCESSFUL;
@@ -447,8 +445,8 @@ namespace bad_code_detector
         DWORD lenght = sizeof(ULONG);
 #endif
         nt_status = LI_FN(NtQueryInformationProcess).nt_cached()(NtCurrentProcess, ProcessDebugObjectHandle, &debug_object, lenght, &return_lenght);
-
-        if (nt_status != STATUS_PORT_NOT_SET || debug_object != NULL || return_lenght != sizeof(HANDLE))
+        
+        if (nt_status != STATUS_PORT_NOT_SET || debug_object != NULL || return_lenght != lenght)
         {
             LI_FN(NtRemoveProcessDebug).nt_cached()(NtCurrentProcess, debug_object);
             return TRUE;
@@ -456,7 +454,7 @@ namespace bad_code_detector
 
         //https://forum.tuts4you.com/topic/40011-vmprotect-312-build-886-anti-debug-method-improved/?do=findComment&comment=192827
         nt_status = LI_FN(NtQueryInformationProcess).nt_cached()(NtCurrentProcess, ProcessDebugObjectHandle, &debug_object, lenght, (PULONG)&debug_object);
-        if (nt_status != STATUS_PORT_NOT_SET || reinterpret_cast<ULONG>(debug_object) != sizeof(HANDLE) || reinterpret_cast<ULONG>(debug_object) != lenght)
+        if (nt_status != STATUS_PORT_NOT_SET || reinterpret_cast<ULONG>(debug_object) != lenght)
             return TRUE;
 
         //VMP 3.6.1410
@@ -467,7 +465,8 @@ namespace bad_code_detector
             BSOD_DO_TITAN_HIDE(NtCurrentProcess);
             return TRUE;
         }
- 
+        debug_object = NULL;
+
        //Bug like VMP:https://github.com/mrexodia/TitanHide/blob/fb7085e5956bc04c4e3add3fbaf73b1bcd432728/TitanHide/hooks.cpp#L465
         nt_status = LI_FN(NtQueryInformationProcess).nt_cached()(NULL, ProcessDebugObjectHandle, reinterpret_cast<PVOID>(1), lenght, reinterpret_cast<PULONG>(0x1));
         if (nt_status != STATUS_ACCESS_VIOLATION &&  nt_status != STATUS_DATATYPE_MISALIGNMENT)
@@ -475,12 +474,14 @@ namespace bad_code_detector
             BSOD_DO_TITAN_HIDE(NtCurrentProcess);
             return TRUE;
         }
-		
+
         number_handle = bad_code_detector::util::get_number_handle();
 		
         bug_handle = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, (DWORD)NtCurrentTeb()->ClientId.UniqueProcess);
         if (bug_handle)
         {
+            debug_object = reinterpret_cast<HANDLE>(1);
+
             if (bug_handle) //need for macro(yes,bad code)
             {
                 BREAK_INFO();
@@ -494,24 +495,26 @@ namespace bad_code_detector
                 RESTORE_INFO();
                 LI_FN(NtClose).nt_cached()(bug_handle);
                 return TRUE;
-            }
+            } 
+            debug_object = NULL;
 
             BREAK_INFO();
             nt_status = LI_FN(NtQueryInformationProcess).nt_cached()(bug_handle, ProcessDebugObjectHandle, &debug_object, lenght, &return_lenght);
             RESTORE_INFO();
-
-            if (nt_status != STATUS_PORT_NOT_SET || debug_object != NULL || return_lenght != sizeof(HANDLE))
+            if (nt_status != STATUS_PORT_NOT_SET || debug_object != NULL || return_lenght != lenght)
             {
                 //Remove DebugPort
-                LI_FN(NtRemoveProcessDebug).nt_cached()(NtCurrentProcess, debug_object);
+                //LI_FN(NtRemoveProcessDebug).nt_cached()(NtCurrentProcess, debug_object);
                 LI_FN(NtClose).nt_cached()(bug_handle); 
                 return TRUE;
             }
-            
-            for (INT i = 0; i < 0x100; i++)
+
+            for (INT i = NULL; i < 0x100; i++)
             {
                 BREAK_INFO();
                 LI_FN(NtQueryInformationProcess).nt_cached()(bug_handle, ProcessDebugObjectHandle, &debug_object, lenght, &return_lenght);
+                //overwrite handle by system for bypass if anti-anti-debug tool close handle
+                LI_FN(NtQueryInformationProcess).nt_cached()(bug_handle, ProcessDebugObjectHandle, &return_lenght, lenght, &return_lenght);
                 RESTORE_INFO();
             }
             //if anti-anti-debug tool call original function and don't close handle,than handle was leak 
@@ -525,8 +528,12 @@ namespace bad_code_detector
         else
         {
             for (INT i = 0; i < 0x100; i++)
+            {
                 LI_FN(NtQueryInformationProcess).nt_cached()(NtCurrentProcess, ProcessDebugObjectHandle, &debug_object, lenght, &return_lenght);
-            
+                //overwrite handle by system for bypass if anti-anti-debug tool close handle
+                LI_FN(NtQueryInformationProcess).nt_cached()(NtCurrentProcess, ProcessDebugObjectHandle, &return_lenght, lenght, &return_lenght);
+
+            }
             //if anti-anti-debug tool call original function and don't close handle,than handle was leak 
             if (bad_code_detector::util::get_number_handle() - number_handle > 0x75)
                 return TRUE;
@@ -546,14 +553,19 @@ namespace bad_code_detector
     __declspec(noinline) auto is_bad_number_object_system() -> bool
     {
         HANDLE debug_object = NULL;
-        OBJECT_ATTRIBUTES object_attrib;
+        uint8_t* object_location = NULL;
         uint64_t number_debug_object_system = NULL;
         uint64_t number_debug_handle_system = NULL;
         uint64_t number_debug_object_process = NULL;
         uint64_t number_debug_handle_process = NULL;
+        uint64_t tmp = NULL;
         ULONG lenght = NULL;
-        NTSTATUS nt_status = STATUS_UNSUCCESSFUL;
         PVOID buffer = NULL;
+        NTSTATUS nt_status = STATUS_UNSUCCESSFUL;
+        OBJECT_ATTRIBUTES object_attrib;
+        POBJECT_TYPE_INFORMATION object_process = NULL;
+        POBJECT_TYPE_INFORMATION object_type_info = NULL;
+        POBJECT_ALL_INFORMATION  object_all_info = NULL;
 
         InitializeObjectAttributes(&object_attrib, NULL, NULL, NULL, NULL);
         nt_status = LI_FN(NtCreateDebugObject).nt_cached()(&debug_object, DEBUG_ALL_ACCESS, &object_attrib, 0);
@@ -571,7 +583,7 @@ namespace bad_code_detector
                 return FALSE;
             }
             nt_status = LI_FN(NtQueryObject).nt_cached()(debug_object, ObjectTypeInformation, buffer, lenght, &lenght);
-            POBJECT_TYPE_INFORMATION object_process = reinterpret_cast<POBJECT_TYPE_INFORMATION>(buffer);
+            object_process = reinterpret_cast<POBJECT_TYPE_INFORMATION>(buffer);
             //SharpOD don't hook ObjectTypeInformation
             if (object_process->TotalNumberOfObjects != 1 && util::wstricmp(L"DebugObject", object_process->TypeName.Buffer) == NULL)
             {
@@ -602,28 +614,28 @@ namespace bad_code_detector
                 return FALSE;
             }
 
-            auto  objectAllInfo = reinterpret_cast<POBJECT_ALL_INFORMATION>(buffer);
-            UCHAR* objInfoLocation = reinterpret_cast<UCHAR*>(objectAllInfo->ObjectTypeInformation);
-            for (ULONG i = NULL; i < objectAllInfo->NumberOfObjectsTypes; i++)
+            object_all_info = reinterpret_cast<POBJECT_ALL_INFORMATION>(buffer);
+            object_location = reinterpret_cast<UCHAR*>(object_all_info->ObjectTypeInformation);
+            for (ULONG i = NULL; i < object_all_info->NumberOfObjectsTypes; i++)
             {
-                POBJECT_TYPE_INFORMATION objectTypeInfo = reinterpret_cast<POBJECT_TYPE_INFORMATION>(objInfoLocation);
+                object_type_info = reinterpret_cast<POBJECT_TYPE_INFORMATION>(object_location);
 
                 // The debug object will always be present
-                if (util::wstricmp(L"DebugObject", objectTypeInfo->TypeName.Buffer) == NULL)
+                if (util::wstricmp(L"DebugObject", object_type_info->TypeName.Buffer) == NULL)
                 {
-                    if (objectTypeInfo->TotalNumberOfObjects > NULL)
-                        number_debug_object_system += objectTypeInfo->TotalNumberOfObjects;
-                    if (objectTypeInfo->TotalNumberOfHandles > NULL)
-                        number_debug_handle_system += objectTypeInfo->TotalNumberOfHandles;
+                    if (object_type_info->TotalNumberOfObjects > NULL)
+                        number_debug_object_system += object_type_info->TotalNumberOfObjects;
+                    if (object_type_info->TotalNumberOfHandles > NULL)
+                        number_debug_handle_system += object_type_info->TotalNumberOfHandles;
                 }
                   
-                objInfoLocation = (uint8_t*)objectTypeInfo->TypeName.Buffer;
-                objInfoLocation += objectTypeInfo->TypeName.MaximumLength;
-                ULONG_PTR tmp = ((ULONG_PTR)objInfoLocation) & -(int)sizeof(void*);
+                object_location = (uint8_t*)object_type_info->TypeName.Buffer;
+                object_location += object_type_info->TypeName.MaximumLength;
+                tmp = ((uint64_t)object_location) & -(int)sizeof(void*);
 
-                if ((ULONG_PTR)tmp != (ULONG_PTR)objInfoLocation)
+                if ((uint64_t)tmp != (uint64_t)object_location)
                     tmp += sizeof(PVOID);
-                objInfoLocation = ((uint8_t*)tmp);
+                object_location = ((uint8_t*)tmp);
             }
             VirtualFree(buffer, NULL, MEM_RELEASE);
             LI_FN(NtClose).nt_cached()(debug_object);
