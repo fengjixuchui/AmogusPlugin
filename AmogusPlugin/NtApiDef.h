@@ -16,6 +16,30 @@ NtSystemDebugControl
     OUT PULONG              ReturnLength OPTIONAL
 );
 
+NTSTATUS
+NTAPI
+NtSetInformationObject
+(
+    HANDLE               ObjectHandle,
+    OBJECT_INFORMATION_CLASS ObjectInformationClass,
+    PVOID                ObjectInformation,
+    ULONG                Length
+);
+
+
+NTSTATUS
+NTAPI
+NtDuplicateObject
+(
+
+    HANDLE               SourceProcessHandle,
+    HANDLE               SourceHandle,
+    HANDLE               TargetProcessHandle,
+    PHANDLE              TargetHandle,
+    ACCESS_MASK          DesiredAccess ,
+    ULONG               InheritHandle,
+    ULONG                Options
+);
 
 NTSTATUS
 NTAPI

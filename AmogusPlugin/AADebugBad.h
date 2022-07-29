@@ -266,6 +266,7 @@ namespace bad_code_detector
         return FALSE;
     }
 
+
     /*
     Detect   HyperHide and need check windows >= 8.1+
     https://github.com/Air14/HyperHide/blob/11d9ebc7ce5e039e890820f8712e3c678f800370/HyperHideDrv/HookedFunctions.cpp#L624
@@ -540,6 +541,75 @@ namespace bad_code_detector
         }
         return FALSE;
     }
+
+    __declspec(noinline) auto is_bad_close_handle() -> bool
+    {
+        bool is_bad_close_detect = FALSE;
+        HANDLE dublicate_handle = NULL;
+        NTSTATUS nt_status = STATUS_UNSUCCESSFUL;
+        PROCESS_HANDLE_TRACING_ENABLE tracing_handle = { 0 };
+        OBJECT_HANDLE_FLAG_INFORMATION ObjectInformation = { 0 };
+
+        __try
+        {
+            LI_FN(NtClose).nt_cached()((HANDLE)(L"I_love_colby_<3"));
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            return TRUE;
+        } 
+
+        __try
+        {
+            ObjectInformation.ProtectFromClose = TRUE;
+            LI_FN(NtDuplicateObject).nt_cached()(NtCurrentProcess, NtCurrentProcess, NtCurrentProcess, &dublicate_handle, NULL, FALSE, NULL);
+            LI_FN(NtSetInformationObject).nt_cached()(dublicate_handle, ObjectHandleFlagInformation, &ObjectInformation, sizeof(OBJECT_HANDLE_FLAG_INFORMATION));
+            LI_FN(NtDuplicateObject).nt_cached()(NtCurrentProcess, dublicate_handle, NtCurrentProcess, &dublicate_handle, NULL, FALSE, DUPLICATE_CLOSE_SOURCE);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            return TRUE;
+        }
+        ObjectInformation.ProtectFromClose = FALSE;
+        LI_FN(NtSetInformationObject).nt_cached()(dublicate_handle, ObjectHandleFlagInformation, &ObjectInformation, sizeof(OBJECT_HANDLE_FLAG_INFORMATION));
+        LI_FN(NtClose).nt_cached()(dublicate_handle);
+
+        //Emable tracing
+        nt_status = LI_FN(NtSetInformationProcess).nt_cached()(NtCurrentProcess, ProcessHandleTracing, &tracing_handle, sizeof(PROCESS_HANDLE_TRACING_ENABLE));
+        if (!NT_SUCCESS(nt_status))
+            return FALSE; 
+        __try
+        {
+            LI_FN(NtClose).nt_cached()((HANDLE)(L"I_love_colby_<3"));
+            is_bad_close_detect = TRUE;
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            is_bad_close_detect = FALSE;
+        } 
+        __try
+        {
+            ObjectInformation.ProtectFromClose = TRUE;
+            LI_FN(NtDuplicateObject).nt_cached()(NtCurrentProcess, NtCurrentProcess, NtCurrentProcess, &dublicate_handle, NULL, FALSE, NULL);
+            LI_FN(NtSetInformationObject).nt_cached()(dublicate_handle, ObjectHandleFlagInformation, &ObjectInformation, sizeof(OBJECT_HANDLE_FLAG_INFORMATION));
+            LI_FN(NtDuplicateObject).nt_cached()(NtCurrentProcess, dublicate_handle, NtCurrentProcess, &dublicate_handle, NULL, FALSE, DUPLICATE_CLOSE_SOURCE);
+            is_bad_close_detect = TRUE;
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            is_bad_close_detect = FALSE;
+        }
+        ObjectInformation.ProtectFromClose = FALSE;
+        LI_FN(NtSetInformationObject).nt_cached()(dublicate_handle, ObjectHandleFlagInformation, &ObjectInformation, sizeof(OBJECT_HANDLE_FLAG_INFORMATION));
+        LI_FN(NtClose).nt_cached()(dublicate_handle);
+
+        //Disable tracing
+        nt_status = LI_FN(NtSetInformationProcess).nt_cached()(NtCurrentProcess, ProcessHandleTracing, &tracing_handle, NULL);
+        
+        return is_bad_close_detect;
+    }
+
+
 
     /*
     HyperHide bug:https://github.com/Air14/HyperHide/blob/11d9ebc7ce5e039e890820f8712e3c678f800370/HyperHideDrv/HookedFunctions.cpp#L594
